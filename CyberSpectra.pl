@@ -1,4 +1,4 @@
-﻿use strict;
+use strict;
 use warnings;
 use Net::Wireless::80211;
 use Net::Wifi;
@@ -10,6 +10,7 @@ use Crypt::PasswdMD5;
 use Password::Policy;
 use Tk;
 use Tk::Table;
+use Parallel::ForkManager;
 
 # Configuración
 my $interface = "eth0";
@@ -42,10 +43,9 @@ sub analizar_redes_wifi {
 sub evaluar_contraseña {
     my ($contraseña) = @_;
 
-    my $policy = Password::Policy->new;
+    my $policy = Password::Policy->new(length => {min => 8});
 
     # Realizar análisis de seguridad de la contraseña
-    my $length = length $contraseña;
     my $is_secure = $policy->check($contraseña);
 
     if ($is_secure) {
@@ -61,10 +61,6 @@ sub evaluar_contraseña {
 sub sugerir_medidas_contraseña {
     my ($contraseña) = @_;
 
-    # Realizar análisis de la contraseña y proporcionar sugerencias para mejorarla
-    # Aquí puedes implementar algoritmos para sugerir medidas como longitud mínima,
-    # caracteres especiales, combinación de mayúsculas y minúsculas, etc.
-    # Por ejemplo:
     my $sugerencias = "";
     $sugerencias .= "Aumentar la longitud de la contraseña.\n" if length($contraseña) < 10;
     $sugerencias .= "Incluir caracteres especiales en la contraseña.\n" if $contraseña !~ /[!@#$%^&*()]/;
@@ -80,8 +76,6 @@ sub sugerir_medidas_contraseña {
 sub desencriptar_contraseña {
     my ($contraseña_encriptada) = @_;
 
-    # Desencriptar la contraseña utilizando el algoritmo correspondiente
-    # Asume que se está utilizando Crypt::PasswdMD5 para encriptar las contraseñas
     my $desencriptada = Crypt::PasswdMD5::apache_md5_crypt('', $contraseña_encriptada);
 
     return $desencriptada;
@@ -91,17 +85,17 @@ sub desencriptar_contraseña {
 sub mostrar_contraseña_desencriptada {
     my ($contraseña_encriptada) = @_;
 
-    # Desencriptar la contraseña
     my $contraseña_desencriptada = desencriptar_contraseña($contraseña_encriptada);
 
-    # Mostrar la contraseña desencriptada
     print "Contraseña desencriptada: $contraseña_desencriptada\n";
 }
 
 # Función para capturar y analizar el tráfico de red en una red Wi-Fi específica
 sub analizar_trafico_red {
     my $dev = Net::Pcap::lookupdev(\my $err);
+    die "No se puede encontrar el dispositivo de red: $err" if $err;
     my $pcap = Net::Pcap::open_live($dev, 1500, 0, 1000, \$err);
+    die "No se puede abrir el dispositivo de captura: $err" if $err;
 
     Net::Pcap::loop($pcap, -1, \&capturar_paquete, "");
 
@@ -125,9 +119,6 @@ sub capturar_paquete {
 sub analizar_paquete_ip {
     my ($ip_pkt) = @_;
 
-    # Realizar análisis de tráfico y detección de patrones inusuales
-    # Implementar algoritmos de análisis, como estadísticas de flujo,
-    # análisis de puertos, reconocimiento de firmas de ataques, etc.
     foreach my $algorithm (@analysis_algorithms) {
         if ($algorithm eq "SSH") {
             analizar_tráfico_ssh($ip_pkt);
@@ -146,10 +137,8 @@ sub analizar_tráfico_ssh {
         my $src_port = $tcp_pkt->{src_port};
         my $dst_port = $tcp_pkt->{dest_port};
 
-        # Realizar acciones en función de los puertos detectados
         if ($src_port == 22 || $dst_port == 22) {
             print "Se detectó tráfico en el puerto SSH (22).\n";
-            # Ejecutar acciones adicionales, como alertas o bloqueo de tráfico sospechoso
             ejecutar_acciones_ssh($ip_pkt);
         }
     }
@@ -159,11 +148,6 @@ sub analizar_tráfico_ssh {
 sub ejecutar_acciones_ssh {
     my ($ip_pkt) = @_;
 
-    # Aquí puedes implementar acciones adicionales en caso de detectar tráfico SSH
-    # Por ejemplo, registrar intentos de acceso, bloquear direcciones IP sospechosas, etc.
-    # Puedes acceder a la información del paquete IP para obtener detalles adicionales
-
-    # Ejemplo: Registrar intentos de acceso SSH fallidos
     my $src_ip = $ip_pkt->{src_ip};
     my $dst_ip = $ip_pkt->{dest_ip};
     my $timestamp = scalar localtime;
@@ -174,10 +158,7 @@ sub ejecutar_acciones_ssh {
 # Función para analizar anomalías en paquetes IP
 sub analizar_anomalías {
     my ($ip_pkt) = @_;
-
     # Implementar algoritmos para detectar anomalías en el tráfico IP
-    # Por ejemplo, puedes analizar el tamaño de los paquetes, el tiempo entre paquetes, etc.
-    # Realizar acciones en caso de detectar anomalías
 }
 
 # Función para auditar la fortaleza de las contraseñas utilizadas en las redes Wi-Fi
@@ -188,9 +169,7 @@ sub auditar_contraseñas {
         print "SSID: " . $red->{ssid} . "\n";
 
         if ($red->{encryption} =~ /WPA/i) {
-            # Verificar la fortaleza de la contraseña
             evaluar_contraseña($red->{password});
-            # Desencriptar la contraseña y mostrarla
             mostrar_contraseña_desencriptada($red->{password});
         }
 
@@ -200,36 +179,22 @@ sub auditar_contraseñas {
 
 # Función principal del programa
 sub main {
-    # Crear la interfaz de usuario
     create_gui();
 
-    # Crear un administrador de procesos en paralelo
-    my $pm = Parallel::ForkManager->new(2);  # Ejecutar hasta 2 procesos en paralelo
+    my $pm = Parallel::ForkManager->new(2);
 
-    # Tarea 1: Análisis de redes Wi-Fi
     $pm->start and next;
-    eval {
-        analizar_redes_wifi();
-    };
-    if ($@) {
-        print "Error en el análisis de redes Wi-Fi: $@\n";
-    }
+    eval { analizar_redes_wifi(); };
+    if ($@) { print "Error en el análisis de redes Wi-Fi: $@\n"; }
     $pm->finish;
 
-    # Tarea 2: Análisis de tráfico de red
     $pm->start and next;
-    eval {
-        analizar_trafico_red();
-    };
-    if ($@) {
-        print "Error en el análisis de tráfico de red: $@\n";
-    }
+    eval { analizar_trafico_red(); };
+    if ($@) { print "Error en el análisis de tráfico de red: $@\n"; }
     $pm->finish;
 
-    # Esperar a que finalicen todas las tareas en paralelo
     $pm->wait_all_children;
 
-    # Mostrar la interfaz de usuario
     $main_window->MainLoop;
 }
 
@@ -238,21 +203,17 @@ sub create_gui {
     $main_window = MainWindow->new;
     $main_window->title("Análisis de Seguridad de Redes");
 
-    # Crear una tabla para mostrar los resultados
     $table = $main_window->Scrolled('Table', -scrollbars => 'se')->pack;
     $table->configure(-rows => 10, -cols => 2);
 
-    # Encabezados de la tabla
     $table->set(0, 0, "SSID");
     $table->set(0, 1, "Cifrado");
 
-    # Configuración de la tabla
     $table->tagConfigure('header', -foreground => 'white', -background => 'black');
     $table->tagConfigure('data', -foreground => 'black');
 
     $table->tagRow('header', 0);
 
-    # Actualizar la tabla con los resultados
     sub update_table {
         my ($ssid, $cifrado) = @_;
 
@@ -263,10 +224,6 @@ sub create_gui {
         $table->tagRow('data', $table_row);
         $table->configure(-scrollregion => [$table->bbox('all')]);
     }
-
-    # Asociar la función de actualización a la salida estándar
-    *STDOUT = *STDERR = *update_table;
 }
 
-# Llamada a la función principal del programa
 main();
