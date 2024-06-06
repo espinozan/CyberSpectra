@@ -30,6 +30,33 @@ Antes de ejecutar CyberSpectra, asegúrate de tener instaladas las siguientes de
 
 Puedes instalar estas dependencias utilizando el gestor de paquetes de Perl, como cpanm o cpan.
 
+#script de instalacion con cpanm en bash
+'
+#!/bin/bash
+
+# Ensure cpanm is installed
+if ! command -v cpanm &> /dev/null
+then
+    echo "cpanm could not be found, installing..."
+    cpan App::cpanminus
+fi
+
+# Install required Perl modules
+cpanm Net::Wireless::80211
+cpanm Net::Wifi
+cpanm Net::Pcap
+cpanm NetPacket::Ethernet
+cpanm NetPacket::IP
+cpanm NetPacket::TCP
+cpanm Crypt::PasswdMD5
+cpanm Password::Policy
+cpanm Tk
+cpanm Tk::Table
+cpanm Parallel::ForkManager
+
+echo "All modules installed successfully."
+'
+
 ## Uso
 
 1. Clona este repositorio en tu máquina local.
