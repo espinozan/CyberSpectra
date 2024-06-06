@@ -31,7 +31,7 @@ Antes de ejecutar CyberSpectra, asegúrate de tener instaladas las siguientes de
 Puedes instalar estas dependencias utilizando el gestor de paquetes de Perl, como cpanm o cpan.
 
 #script de instalacion con cpanm en bash
-'
+
 #!/bin/bash
 
 # Ensure cpanm is installed
@@ -55,7 +55,7 @@ cpanm Tk::Table
 cpanm Parallel::ForkManager
 
 echo "All modules installed successfully."
-'
+
 
 ## Uso
 
